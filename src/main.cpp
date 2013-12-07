@@ -1,4 +1,5 @@
 #include <iostream>
+#include "sqlite3.h"
 #include "cg_test.h"
 
 int main(){
