@@ -6,3 +6,4 @@ install_manifest.txt
 ThirdParty
 *.sublime-workspace
 sqlite_cmake.txt
+*.db

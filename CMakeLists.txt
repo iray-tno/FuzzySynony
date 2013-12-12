@@ -22,6 +22,9 @@ cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 
 # http://www.swig.org/Doc1.3/Introduction.html#Introduction%5Fbuild%5Fsystem
 # A sample of integratation swig and cmake for python
+
+# http://wiki.livedoor.jp/kou1okada/d/CMake
+# To cross compile with toolchain (MinGW etc)
 #----------------------------------------------------------------------------------------------------
 #>End
 
@@ -91,6 +94,7 @@ endif(quick)
 
 if(NOT test)
 	set(skip_gtest ON)
+	set(skip_sqlite ON)
 endif(NOT test)
 
 # Set default ExternalProject root directory
@@ -169,7 +173,7 @@ else(skip_sqlite)
 	
 	set(sqlite_cmake ${CMAKE_SOURCE_DIR}/${SQLITE_CMAKE_FILENAME})
 		
-	file(WRITE ${sqlite_cmake} "cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)\n")
+	file(WRITE  ${sqlite_cmake} "cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)\n")
 	file(APPEND ${sqlite_cmake} "set(PROJECT_NAME "${SQLITE}")\n")
 	file(APPEND ${sqlite_cmake} "option(SQLITE_BUILD_STATIC \"Build SQLite static library\" ON)\n")
 	file(APPEND ${sqlite_cmake} "option(SQLITE_BUILD_SHARED \"Build SQLite shared library\" ON)\n")
@@ -245,10 +249,14 @@ endif(skip_sqlite)
 #----------------------------------------------------------------------------------------------------
 if(test)
 	include_directories(${gtest_source_dir}/${INCLUDE})
+	include_directories(${sqlite_source_dir})
 
 	# Build Test Main
-	add_executable(RunAllTests ${PROJECT_SOURCE_DIR}/${SRC}/run_all_tests.cpp)
-	add_dependencies(RunAllTests googletest)
+	list(APPEND tests_src ${PROJECT_SOURCE_DIR}/${SRC}/gtest_main.cpp)
+	list(APPEND tests_src ${PROJECT_SOURCE_DIR}/${SRC}/fuzzysynony.cpp)
+	
+	add_executable(RunAllTests ${tests_src})
+	add_dependencies(RunAllTests googletest sqlite)
 
 	# Specify MainTest's link libraries
 	if(MSVC)
@@ -264,6 +272,13 @@ if(test)
 		optimized ${gtest_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${GTEST_LIB_NAME}${suffix}
 		${pthread}
 	)
+
+	target_link_libraries(
+		RunAllTests
+		debug ${sqlite_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
+		optimized ${sqlite_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
+		${pthread}
+	)
 endif(test)
 #----------------------------------------------------------------------------------------------------
 #>End
@@ -273,9 +288,14 @@ endif(test)
 #----------------------------------------------------------------------------------------------------
 if(main)
 
-	add_executable(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/${SRC}/main.cpp)
-
 	include_directories(${sqlite_source_dir})
+
+	# Build Test Main
+	list(APPEND main_src ${PROJECT_SOURCE_DIR}/${SRC}/main.cpp)
+	list(APPEND main_src ${PROJECT_SOURCE_DIR}/${SRC}/fuzzysynony.cpp)
+	
+	add_executable(${PROJECT_NAME} ${main_src})
+
 	add_dependencies(${PROJECT_NAME} sqlite)
 
 	target_link_libraries(
