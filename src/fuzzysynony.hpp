@@ -69,7 +69,8 @@ inline std::string wstr_to_str (const std::wstring& str)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 	return conv.to_bytes(str);
-}*/
+}
+*/
 
 inline std::wstring str_to_wstr (const std::string& str){
 	setlocale( LC_CTYPE, "" );
@@ -96,7 +97,12 @@ class FuzzySynony{
 	                is_monogram_available_(false),
 	                is_bigram_available_(true),
 	                is_trigram_available_(false){};
-	FuzzySynony(const std::string& db_name) : is_sqlite_opened_(false){ OpenSQLite(db_name); }
+
+	FuzzySynony(const std::string& db_name) : is_sqlite_opened_(false),
+	                is_monogram_available_(false),
+	                is_bigram_available_(true),
+	                is_trigram_available_(false){ OpenSQLite(db_name); }
+
 	~FuzzySynony(){ CloseSQLite(); }
 
 	void OpenSQLite(const std::string& db_name){

@@ -25,15 +25,13 @@ void FuzzySynony::ClearTable(){
 	    "PRIMARY KEY(WORDID, OFFSET) ON CONFLICT IGNORE"
 	");";
 
+	//バイグラムインデックス
 	const std::string SQL_CREATE_INDEX_BIGRAM = "CREATE INDEX BIGRAMINDEX ON BIGRAM(GRAM);";
-	//CREATE TABLE BIGRAM(GRAM TEXT NOT NULL,WORDID INTEGER NOT NULL,OFFSET INTEGER NOT NULL,PRIMARY KEY(WORDID, OFFSET) ON CONFLICT IGNORE);
 	
 	sqlite3_exec(db_handler_, SQL_CREATE_TABLE_WORDS.c_str(), NULL, NULL, NULL);
 	sqlite3_exec(db_handler_, SQL_CREATE_TABLE_BIGRAM.c_str(), NULL, NULL, NULL);
 	sqlite3_exec(db_handler_, SQL_CREATE_INDEX_BIGRAM.c_str(), NULL, NULL, NULL);
 }
-
-//void FuzzySynony::AddWord(const std::wstring word){}
 
 
 void FuzzySynony::AddWord(const std::string word){
@@ -60,7 +58,6 @@ void FuzzySynony::AddWord(const std::string word){
 			for(int i = 0; i < ngrams.size(); i++){
 				wss_sql_buf << L"INSERT INTO BIGRAM VALUES('"
 				<< ngrams[i].index << L"', " << word_id << L", " << ngrams[i].offset << L");";
-std::cout << wstr_to_str(wss_sql_buf.str()).c_str() << std::endl;
 				sqlite3_exec(db_handler_, wstr_to_str(wss_sql_buf.str()).c_str(), NULL, NULL, NULL);
 				wss_sql_buf.str(L"");
 				wss_sql_buf.clear(); 

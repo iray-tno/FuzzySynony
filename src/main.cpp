@@ -12,6 +12,9 @@ int main(){
 	fs.AddWord("あいaえお");
 	fs.AddWord("あか塩たな");
 	fs.AddWord("かきがけこ");
+	fs.AddWord("高橋");
 	fs.AddWord("田中");
+	fs.AddWord("鈴木");
+	fs.AddWord("中田");
 	return 0;
 }
