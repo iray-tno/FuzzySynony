@@ -5,10 +5,13 @@
 
 int main(){
 	FuzzySynony fs("testa.db");
-	sqlite3* pDB;
-	std::cout << sqlite3_open("test.db", &pDB) << std::endl
-	          << SQLITE_OK << std::endl
-	          << sqlite3_close(pDB) << std::endl;
-	std::cout <<"helloworld" << std::endl;
+	fs.ClearTable();
+	fs.AddWord("あいうえお");
+	fs.AddWord("あかさたな");
+	fs.AddWord("かきくけこ");
+	fs.AddWord("あいaえお");
+	fs.AddWord("あか塩たな");
+	fs.AddWord("かきがけこ");
+	fs.AddWord("田中");
 	return 0;
 }

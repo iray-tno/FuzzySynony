@@ -97,6 +97,8 @@ if(NOT test)
 	set(skip_sqlite ON)
 endif(NOT test)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++11") # always use gnu99
+
 # Set default ExternalProject root directory
 set_directory_properties(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/${THIRDPARTY})
 #----------------------------------------------------------------------------------------------------
