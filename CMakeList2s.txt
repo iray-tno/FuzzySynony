@@ -44,14 +44,13 @@ option(quick "Quick build without check all external projects." OFF)
 option(skip_gtest "Quick build without check gtest." OFF)
 option(skip_sqlite "Quick build without check sqlite." OFF)
 option(main  "Build main." OFF)
-option(qt    "Build on Qt5" OFF)
 #----------------------------------------------------------------------------------------------------
 #>End
 
 
 #>Variavles
 #----------------------------------------------------------------------------------------------------
-set(PROJECT_NAME   "fuzzysynony2")
+set(PROJECT_NAME   "fuzzysynony")
 set(SRC            "src")
 set(INCLUDE        "include")
 set(CMAKELISTS_TXT "CMakeLists.txt")
@@ -98,18 +97,7 @@ if(NOT test)
 	set(skip_sqlite ON)
 endif(NOT test)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
-
-if(MINGW)
-	string(REPLACE ";" "" fixed_prefixes ${CMAKE_FIND_LIBRARY_PREFIXES})
-else(MINGW)
-	set(fixed_prefixes ${CMAKE_FIND_LIBRARY_PREFIXES})
-endif(MINGW)
-
-if(qt)
-	find_package(Qt5Core REQUIRED)
-endif(qt)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++11") # always use gnu99
 
 # Set default ExternalProject root directory
 set_directory_properties(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/${THIRDPARTY})
@@ -132,7 +120,7 @@ else(skip_gtest)# Download and build google test
 	if(MSVC_VERSION EQUAL 1700) # Create patch file for gtest with MSVC 2012
 		file(WRITE  ${gtest_patch} "Index: cmake/internal_utils.cmake\n")
 		file(APPEND ${gtest_patch} "===================================================================\n")
-        file(APPEND ${gtest_patch} "--- cmake/internal_utils.cmake   (revision ${GTEST_REV})\n")
+		file(APPEND ${gtest_patch} "--- cmake/internal_utils.cmake   (revision "${GTEST_REV}")\n")
 		file(APPEND ${gtest_patch} "+++ cmake/internal_utils.cmake   (working copy)\n")
 		file(APPEND ${gtest_patch} "@@ -66,6 +66,9 @@\n")
 		file(APPEND ${gtest_patch} "       # Resolved overload was found by argument-dependent lookup.\n")
@@ -184,15 +172,9 @@ if(skip_sqlite)
 	#Nothing to do now.
 
 else(skip_sqlite)
-
-	set(SQLITE_SOURCE ${SQLITE_URL})
-
-	if(MINGW)
-		set(sqlite_cmake ${sqlite_source_dir}/${CMAKELISTS_TXT})
-	else(MINGW)
-		set(sqlite_cmake ${CMAKE_SOURCE_DIR}/${SQLITE_CMAKE_FILENAME})
-	endif(MINGW)
-
+	
+	set(sqlite_cmake ${CMAKE_SOURCE_DIR}/${SQLITE_CMAKE_FILENAME})
+		
 	file(WRITE  ${sqlite_cmake} "cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)\n")
 	file(APPEND ${sqlite_cmake} "set(PROJECT_NAME "${SQLITE}")\n")
 	file(APPEND ${sqlite_cmake} "option(SQLITE_BUILD_STATIC \"Build SQLite static library\" ON)\n")
@@ -236,40 +218,25 @@ else(skip_sqlite)
 	file(APPEND ${sqlite_cmake} "	endif()\n")
 	file(APPEND ${sqlite_cmake} "endif(SQLITE_BUILD_SHELL)\n")
 
-	if(MINGW)
-	    ExternalProject_Add (
-			sqlite
-			URL ${SQLITE_SOURCE}
-			CMAKE_ARGS	-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-						-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-						-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-		                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=${TH_DEBUG}
-		                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=${TH_RELEASE}
-		                -DSQLITE_BUILD_SHARED=OFF
-	        PATCH_COMMAND ""
-			INSTALL_COMMAND "" # Disable install step
-			LOG_DOWNLOAD    ON # Wrap download, configure and build steps in a script to log output
-			LOG_CONFIGURE   ON
-			LOG_BUILD       ON
-		)
-	else(MINGW)
-		ExternalProject_Add (
-			sqlite
-			URL ${SQLITE_SOURCE}
-			CMAKE_ARGS	-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-						-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-						-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-		                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=${TH_DEBUG}
-		                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=${TH_RELEASE}
-		                -DSQLITE_BUILD_SHARED=OFF
-	        PATCH_COMMAND cp ${sqlite_cmake} ${sqlite_source_dir}/${CMAKELISTS_TXT}
-			INSTALL_COMMAND "" # Disable install step
-			LOG_DOWNLOAD    ON # Wrap download, configure and build steps in a script to log output
-			LOG_CONFIGURE   ON
-			LOG_BUILD       ON
-		)
-	endif(MINGW)
+	set (SQLITE_SOURCE ${SQLITE_URL})
 
+	ExternalProject_Add (
+		sqlite
+		URL ${SQLITE_SOURCE}
+		CMAKE_ARGS	-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+					-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+					-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+	                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=${TH_DEBUG}
+	                -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=${TH_RELEASE}
+	                -DSQLITE_BUILD_SHARED=OFF
+	                -DSQLITE_BUILD_SHELL=OFF
+		PATCH_COMMAND cp ${sqlite_cmake} ${sqlite_source_dir}/${CMAKELISTS_TXT}
+		INSTALL_COMMAND "" # Disable install step
+		LOG_DOWNLOAD    ON # Wrap download, configure and build steps in a script to log output
+		LOG_CONFIGURE   ON
+		LOG_BUILD       ON
+	)
+	
 	ExternalProject_Get_Property(sqlite source_dir)
 	ExternalProject_Get_Property(sqlite binary_dir)
 	set(sqlite_source_dir ${source_dir})
@@ -299,18 +266,19 @@ if(test)
 	else(MSVC)
 		set(suffix ".a")
 		set(pthread "-pthread")
-    endif(MSVC)
+	endif(MSVC)
 
 	target_link_libraries(
 		RunAllTests
-        debug "${gtest_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${GTEST_LIB_NAME}${suffix}"
-        optimized ${gtest_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${GTEST_LIB_NAME}${suffix}
+		debug ${gtest_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${GTEST_LIB_NAME}${suffix}
+		optimized ${gtest_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${GTEST_LIB_NAME}${suffix}
 		${pthread}
 	)
+
 	target_link_libraries(
 		RunAllTests
-        debug ${sqlite_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
-        optimized ${sqlite_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
+		debug ${sqlite_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
+		optimized ${sqlite_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
 		${pthread}
 	)
 endif(test)
@@ -330,12 +298,12 @@ if(main)
 	
 	add_executable(${PROJECT_NAME} ${main_src})
 
-        add_dependencies(${PROJECT_NAME} sqlite)
+	add_dependencies(${PROJECT_NAME} sqlite)
 
-        target_link_libraries(
+	target_link_libraries(
 		${PROJECT_NAME}
-        debug ${sqlite_binary_dir}/${TH_DEBUG}/${fixed_prefixes}${SQLITE_LIB_NAME}${suffix}
-		optimized ${sqlite_binary_dir}/${TH_RELEASE}/${fixed_prefixes}${SQLITE_LIB_NAME}${suffix}
+		debug ${sqlite_binary_dir}/${TH_DEBUG}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
+		optimized ${sqlite_binary_dir}/${TH_RELEASE}/${CMAKE_FIND_LIBRARY_PREFIXES}${SQLITE_LIB_NAME}${suffix}
 		${pthread}
 	)
 
