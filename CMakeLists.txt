@@ -51,7 +51,7 @@ option(qt    "Build on Qt5" OFF)
 
 #>Variavles
 #----------------------------------------------------------------------------------------------------
-set(PROJECT_NAME   "fuzzysynony2")
+set(PROJECT_NAME   "fuzzysynony")
 set(SRC            "src")
 set(INCLUDE        "include")
 set(CMAKELISTS_TXT "CMakeLists.txt")

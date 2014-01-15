@@ -1,14 +1,13 @@
 #include "fuzzysynony.hpp"
 
-std::vector<Ngram> FuzzySynony::ExtractNgram(const int n,const std::wstring& word){
-	std::vector<Ngram> ngrams;
+int FuzzySynony::ExtractNgram(const int n,const std::wstring& word, std::vector<WNgram>& ret_wngrams){
 	int word_size = word.size()-n+1;
-	ngrams.resize(word_size);
+	ret_wngrams.resize(word_size);
 	for(int i = 0; i < word_size; i++){
-		ngrams.at(i).index = word.substr(i,n);
-		ngrams[i].offset = i;
+		ret_wngrams.at(i).index = word.substr(i,n);
+		ret_wngrams[i].offset = i;
 	}
-	return ngrams;
+	return true;
 }
 
 void FuzzySynony::ClearTable(){
@@ -52,12 +51,13 @@ void FuzzySynony::AddWord(const std::string word){
 	, &word_id ,NULL);
 
 	if(is_bigram_available_){
-		std::vector<Ngram> ngrams = ExtractNgram(2,str_to_wstr(word));
+		std::vector<WNgram> wngrams;
+		ExtractNgram(2, str_to_wstr(word), wngrams);
 		std::wostringstream wss_sql_buf;
-		if(0 < ngrams.size()){
-			for(int i = 0; i < ngrams.size(); i++){
+		if(0 < wngrams.size()){
+			for(int i = 0; i < wngrams.size(); i++){
 				wss_sql_buf << L"INSERT INTO BIGRAM VALUES('"
-				<< ngrams[i].index << L"', " << word_id << L", " << ngrams[i].offset << L");";
+				<< wngrams[i].index << L"', " << word_id << L", " << wngrams[i].offset << L");";
 				sqlite3_exec(db_handler_, wstr_to_str(wss_sql_buf.str()).c_str(), NULL, NULL, NULL);
 				wss_sql_buf.str(L"");
 				wss_sql_buf.clear(); 
@@ -83,4 +83,79 @@ void FuzzySynony::AddWord(const std::string word){
 		}else{}
 		*/
 	}
+}
+
+
+int FuzzySynony::SearchWords(const std::vector<int>& wordids, std::vector<IdWord>& ret_words){
+	int word_id_size = wordids.size();
+	if(word_id_size == 0){
+		return SQLITE_OK;
+	}else{
+		ret_words.reserve(word_id_size);
+
+		std::ostringstream ss_sql_buf;
+		ss_sql_buf << "SELECT * FROM WORDS WHERE ID IN (";
+		for(int i = 0; i < (word_id_size-1); i++){
+			ss_sql_buf << wordids[i] << ", ";
+		}
+		ss_sql_buf << wordids.back() << ");";
+
+		sqlite3_exec(db_handler_, ss_sql_buf.str().c_str(),
+			//anonymous function begin
+			[&] (void *arg_words,int cols, char **values, char **columns) -> int {
+				std::vector<IdWord> *words = static_cast< std::vector<IdWord>* >(arg_words);
+				IdWord idword;
+
+				for(int i = 0; i < cols; i++){
+					std::string column(columns[i]);
+					if(column == "ID"){
+						idword.id = atoi(values[i]);
+					}else if(column == "WORD"){
+						idword.word = values[i];
+					}else{}
+				}
+				words->push_back(idword);
+				return SQLITE_OK;
+			}//anonymous function end
+			, &ret_words ,NULL);
+	}
+	return SQLITE_OK;
+}
+
+
+int FuzzySynony::SearchNgrams(const std::string word, std::vector<DbNgram>& ret_dbngrams){
+	std::vector<WNgram> wngrams;
+	ExtractNgram(2, str_to_wstr(word), wngrams);
+	int wngrams_size = wngrams.size();
+	ret_dbngrams.reserve(wngrams_size*10);
+
+	std::ostringstream ss_sql_buf;
+	ss_sql_buf << "SELECT * FROM BIGRAM WHERE GRAM IN (\"";
+	for(int i = 0; i < (wngrams_size-1); i++){
+		ss_sql_buf << wstr_to_str(wngrams[i].index) << "\", \"";
+	}
+	ss_sql_buf << wstr_to_str(wngrams.back().index) << "\");";
+
+	sqlite3_exec(db_handler_, ss_sql_buf.str().c_str(),
+		//anonymous function begin
+		[&] (void *arg_dbngrams, int cols, char **values, char **columns) -> int{
+			std::vector<DbNgram> *dbngrams = static_cast< std::vector<DbNgram>* >(arg_dbngrams);
+			DbNgram dbngram;
+
+			for(int i = 0; i < cols; i++){
+				std::string column(columns[i]);
+				if(column == "GRAM"){
+					dbngram.index = values[i];
+				}else if(column == "WORDID"){
+					dbngram.wordid = atoi(values[i]);
+				}else if(column == "OFFSET"){
+					dbngram.offset = atoi(values[i]);
+				}
+			}
+			dbngrams->push_back(dbngram);
+			return SQLITE_OK;
+		}//anonymous function end
+		, &ret_dbngrams, NULL);
+	
+	return SQLITE_OK;
 }

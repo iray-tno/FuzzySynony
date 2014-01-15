@@ -7,3 +7,5 @@ ThirdParty
 *.sublime-workspace
 sqlite_cmake.txt
 *.db
+gtest.patch
+.exe

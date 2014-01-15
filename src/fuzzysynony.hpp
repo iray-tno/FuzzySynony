@@ -52,11 +52,24 @@
 //④バイグラムを検索対象から作成
 
 //TODO　固定長文字列を実装（2バイト文字も1文字と数える） クラスにする？
-struct Ngram{
+//TODO  string をtypedefか何かでラップしてQStringとコンパイル時に切り替えられるようにする。
+
+struct WNgram{
 	std::wstring index;
 	int offset;
-	bool operator<( const Ngram& right ) const{ return offset < right.offset; }
-	bool operator>( const Ngram& right ) const{ return offset > right.offset; }
+	bool operator<( const WNgram& right ) const{ return offset < right.offset; }
+	bool operator>( const WNgram& right ) const{ return offset > right.offset; }
+};
+
+struct DbNgram{
+	std::string index;
+	int wordid;
+	int offset;
+};
+
+struct IdWord{
+	int id;
+	std::string word;
 };
 
 /*
@@ -131,12 +144,19 @@ class FuzzySynony{
 	void AddWord(const std::wstring word){ AddWord(wstr_to_str(word)); };
 
  protected:
-	std::vector<Ngram> ExtractNgram(const int n,const std::wstring& word);
-	void AscSort(std::vector<Ngram>& ngrams){ std::sort(ngrams.begin(),ngrams.end()); }
-	void DescSort(std::vector<Ngram>& ngrams){ std::sort(ngrams.begin(),ngrams.end(),std::greater<Ngram>()); }
+	int ExtractNgram(const int n,const std::wstring& word, std::vector<WNgram>& ret_wngrams);
+	void AscSort(std::vector<WNgram>& wngrams){ std::sort(wngrams.begin(),wngrams.end()); }
+	void DescSort(std::vector<WNgram>& wngrams){ std::sort(wngrams.begin(),wngrams.end(),std::greater<WNgram>()); }
+
+	int  SearchWords(const std::vector<int>& word_id, std::vector<IdWord>& ret_words);
+	int  SearchNgrams(const std::string word, std::vector<DbNgram>& ret_dbngrams);
+	int  SearchNgrams(const std::wstring word, std::vector<DbNgram>& ret_dbngrams){ SearchNgrams(wstr_to_str(word), ret_dbngrams);};
+
 	FRIEND_TEST(FuzzySynonyTest, ExtractNgramUnigram);
 	FRIEND_TEST(FuzzySynonyTest, ExtractNgramBigram);
 	FRIEND_TEST(FuzzySynonyTest, ExtractNgramTrigram);
+	FRIEND_TEST(FuzzySynonyTest, SearchWords);
+	FRIEND_TEST(FuzzySynonyTest, SearchNgrams);
 
  private:
 	bool is_sqlite_opened_;
