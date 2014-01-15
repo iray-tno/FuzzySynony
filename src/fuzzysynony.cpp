@@ -86,12 +86,11 @@ void FuzzySynony::AddWord(const std::string word){
 }
 
 
-int FuzzySynony::SearchWords(const std::vector<int>& wordids, std::vector<IdWord>& ret_words){
+int FuzzySynony::SearchWords(const std::vector<int>& wordids, std::unordered_map<int,std::string>& ret_words){
 	int word_id_size = wordids.size();
 	if(word_id_size == 0){
 		return SQLITE_OK;
 	}else{
-		ret_words.reserve(word_id_size);
 
 		std::ostringstream ss_sql_buf;
 		ss_sql_buf << "SELECT * FROM WORDS WHERE ID IN (";
@@ -103,7 +102,7 @@ int FuzzySynony::SearchWords(const std::vector<int>& wordids, std::vector<IdWord
 		sqlite3_exec(db_handler_, ss_sql_buf.str().c_str(),
 			//anonymous function begin
 			[&] (void *arg_words,int cols, char **values, char **columns) -> int {
-				std::vector<IdWord> *words = static_cast< std::vector<IdWord>* >(arg_words);
+				std::unordered_map<int,std::string> *words = static_cast< std::unordered_map<int,std::string>* >(arg_words);
 				IdWord idword;
 
 				for(int i = 0; i < cols; i++){
@@ -114,7 +113,7 @@ int FuzzySynony::SearchWords(const std::vector<int>& wordids, std::vector<IdWord
 						idword.word = values[i];
 					}else{}
 				}
-				words->push_back(idword);
+				(*words)[idword.id] = idword.word;
 				return SQLITE_OK;
 			}//anonymous function end
 			, &ret_words ,NULL);
@@ -128,7 +127,6 @@ int FuzzySynony::SearchNgrams(const std::string word, std::vector<DbNgram>& ret_
 	ExtractNgram(2, str_to_wstr(word), wngrams);
 	int wngrams_size = wngrams.size();
 	ret_dbngrams.reserve(wngrams_size*10);
-
 	std::ostringstream ss_sql_buf;
 	ss_sql_buf << "SELECT * FROM BIGRAM WHERE GRAM IN (\"";
 	for(int i = 0; i < (wngrams_size-1); i++){
@@ -158,4 +156,53 @@ int FuzzySynony::SearchNgrams(const std::string word, std::vector<DbNgram>& ret_
 		, &ret_dbngrams, NULL);
 	
 	return SQLITE_OK;
+}
+
+int  FuzzySynony::Search(const std::string text, std::vector<FSResult>& fsresult){
+	const std::string SUM = "";
+	std::vector<WNgram> wngrams;
+	ExtractNgram(2, str_to_wstr(text), wngrams);
+	std::unordered_map<std::string,int> text_scores;
+	for(int i = 0; i < wngrams.size(); i++){
+		text_scores[wstr_to_str(wngrams[i].index)]++;
+		text_scores[SUM]++;
+	}
+
+	std::vector<DbNgram> dbngrams;
+	SearchNgrams(text, dbngrams);
+	std::unordered_map< int, std::unordered_map<std::string,int> > scores;
+	for(int i = 0; i < dbngrams.size(); i++){
+		if(scores[dbngrams[i].wordid][dbngrams[i].index] < text_scores[dbngrams[i].index]){
+			scores[dbngrams[i].wordid][dbngrams[i].index]++;
+			scores[dbngrams[i].wordid][SUM]++;
+		}
+	}
+
+	std::unordered_map< int, std::unordered_map<std::string, int> >::iterator sitr = scores.begin();
+
+	std::vector<int> wordids;
+	std::vector<int> perfect_matched;
+	while(sitr != scores.end()){
+		wordids.push_back(sitr->first);
+		if(sitr->second[SUM]==text_scores[SUM]){
+			perfect_matched.push_back(sitr->first);
+		}
+		sitr++;
+	}
+	std::unordered_map<int,std::string> idwords;
+	SearchWords(wordids, idwords);
+
+	for(int i = 0; i < perfect_matched.size(); i++){
+		if(idwords[perfect_matched[i]] == text){
+			scores[perfect_matched[i]][SUM] = 2*scores[perfect_matched[i]][SUM] + 1;
+		}
+	}
+
+	fsresult.reserve(scores.size());
+	sitr = scores.begin();
+	while(sitr != scores.end()){
+		fsresult.push_back(FSResult(idwords[sitr->first], sitr->second[SUM]));
+		sitr++;
+	}
+	DescSort(fsresult);
 }

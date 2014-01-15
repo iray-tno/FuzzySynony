@@ -67,7 +67,7 @@ set(TH_STATIC_PREFIX "-static")
 set(GOOGLETEST           "googletest")
 set(GTEST_LIB_NAME       "gtest")
 set(GTEST_REPO           "http://googletest.googlecode.com/svn/trunk/")
-set(GTEST_REV            "668")
+set(GTEST_REV            "675")
 set(GTEST_PATCH_FILENAME "gtest.patch")
 
 #for sqlite
@@ -98,7 +98,7 @@ if(NOT test)
 	set(skip_sqlite ON)
 endif(NOT test)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -U__STRICT_ANSI__")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++11")
 
 if(MINGW)

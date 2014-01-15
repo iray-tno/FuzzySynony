@@ -85,7 +85,7 @@ TEST(FuzzySynonyTest, SearchWords){
 	std::vector<int> ids;
 	std::vector<IdWord> idwords;
 
-	std::vector<IdWord> ret;
+	std::unordered_map<int,std::string> ret_words;
 
 	FuzzySynony fs("SearchWords.db");
 	fs.ClearTable();
@@ -109,14 +109,13 @@ TEST(FuzzySynonyTest, SearchWords){
 		fs.AddWord(idword.word);
 	}
 
-	fs.SearchWords(ids, ret);
+	fs.SearchWords(ids, ret_words);
 
-	EXPECT_EQ(idwords.size(), ret.size());
+	EXPECT_EQ(idwords.size(), ret_words.size());
 
 	for(int i = 0; i < idwords.size(); i++){
 		//TODO: サイズ比較とソートで一意になるようにする
-		EXPECT_EQ(idwords[i].id,ret[i].id);
-		EXPECT_EQ(idwords[i].word,ret[i].word);
+		EXPECT_EQ(idwords[i].word, ret_words[idwords[i].id]);
 	}
 
 }
@@ -184,6 +183,40 @@ TEST(FuzzySynonyTest, SearchNgrams){
 	}
 	//TODO: サイズ比較とソートで一意になるようにする
 
+}
+
+TEST(FuzzySynonyTest, Search){
+	std::vector<std::string> words;
+	std::vector<int> ids;
+	std::vector<IdWord> idwords;
+
+	std::vector<FSResult> ret_fsresult;
+
+	FuzzySynony fs("Search.db");
+	fs.ClearTable();
+	words.push_back("あいうえお");
+	words.push_back("あいええお");
+	words.push_back("あいうえ");
+	words.push_back("あいうえおお");
+	words.push_back("ああいうえお");
+	words.push_back("かきがけこ");
+	words.push_back("あいお");
+	words.push_back("ああああいうえお");
+	words.push_back("あいあかさたな");
+	words.push_back("あいうえおあいうえお");
+	words.push_back("うんこ");
+
+	for(int i = 0; i < words.size(); i++){
+		fs.AddWord(words[i]);
+	}
+
+	fs.Search("あいうえお", ret_fsresult);
+/*
+	std::vector<FSResult>::iterator itr;
+	itr =  std::find_if( ret_fsresult.begin(),  ret_fsresult.end(), equal_word("あいうえお"));
+	std::cout << itr->word << itr->score << std::endl;
+*/
+	EXPECT_EQ("あいうえお", ret_fsresult[0].word);
 }
 
 #endif // FUZZYSYNONY_FUZZYSYNONY_TEST_HPP_

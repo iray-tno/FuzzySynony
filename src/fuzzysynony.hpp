@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 //#include <codecvt>
 /*
 あいまい検索実装
@@ -72,6 +73,24 @@ struct IdWord{
 	std::string word;
 };
 
+struct FSResult{
+	std::string word;
+	int score;
+	FSResult(std::string word, int score):word(word),score(score){}
+	FSResult(){}
+	bool operator<( const FSResult& right ) const{ return (score==right.score)? word.length()>right.word.length() : score < right.score; }
+	bool operator>( const FSResult& right ) const{ return (score==right.score)? word.length()<right.word.length() : score>right.score; }
+};
+
+//http://ymotongpoo.hatenablog.com/entry/20070502/1178079014
+struct equal_word : std::unary_function<FSResult, bool>{
+	std::string _word;
+
+	equal_word(std::string word):_word(word){}
+	bool operator()(const FSResult& fsr) const {
+        return _word == fsr.word;
+    }
+};
 /*
 inline std::wstring str_to_wstr (const std::string& str){
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
@@ -143,12 +162,17 @@ class FuzzySynony{
 	void AddWord(const std::string word);
 	void AddWord(const std::wstring word){ AddWord(wstr_to_str(word)); };
 
+	int Search(const std::string text, std::vector<FSResult>& fsresult);
+
  protected:
-	int ExtractNgram(const int n,const std::wstring& word, std::vector<WNgram>& ret_wngrams);
+	int  ExtractNgram(const int n,const std::wstring& word, std::vector<WNgram>& ret_wngrams);
 	void AscSort(std::vector<WNgram>& wngrams){ std::sort(wngrams.begin(),wngrams.end()); }
 	void DescSort(std::vector<WNgram>& wngrams){ std::sort(wngrams.begin(),wngrams.end(),std::greater<WNgram>()); }
+	
+	void AscSort(std::vector<FSResult>& fsresult){ std::sort(fsresult.begin(),fsresult.end()); }
+	void DescSort(std::vector<FSResult>& fsresult){ std::sort(fsresult.begin(),fsresult.end(),std::greater<FSResult>()); }
 
-	int  SearchWords(const std::vector<int>& word_id, std::vector<IdWord>& ret_words);
+	int  SearchWords(const std::vector<int>& wordids, std::unordered_map<int,std::string>& ret_words);
 	int  SearchNgrams(const std::string word, std::vector<DbNgram>& ret_dbngrams);
 	int  SearchNgrams(const std::wstring word, std::vector<DbNgram>& ret_dbngrams){ SearchNgrams(wstr_to_str(word), ret_dbngrams);};
 
