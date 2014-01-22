@@ -60,7 +60,7 @@ int main(){
 		std::vector<FSResult> ret_fsresult;
 		ret_fsresult.clear();
 		std::cout << "Enter >> ";
-		std::cin.getline(str);
+		std::cin >> str;
 		while(!std::cin){
 			std::cin.clear();
 			std::cin.ignore(INT_MAX,'\n');
